@@ -1,6 +1,35 @@
 import pako from './pako.js'
 const db = new PouchDB('testing');
 
+const resetDB = () => {
+  db.get('bodies').then(function (doc) {
+    return db.remove(doc);
+  }).then(function (result) {
+    console.log(`bodies removed`)
+  }).catch(function (err) {});
+  db.get('employees').then(function (doc) {
+    return db.remove(doc);
+  }).then(function (result) {
+    console.log(`employees removed`)
+  }).catch(function (err) {});
+  db.get('family').then(function (doc) {
+    return db.remove(doc);
+  }).then(function (result) {
+    console.log(`family removed`)
+  }).catch(function (err) {});
+}
+
+const getSize = name => (localStorage[name].length * 2) / 1024
+
+const generateRandomColor = () => {
+  let maxVal = 0xFFFFFF; // 16777215
+  let randomNumber = Math.random() * maxVal;
+  randomNumber = Math.floor(randomNumber);
+  randomNumber = randomNumber.toString(16);
+  let randColor = randomNumber.padStart(6, 0);
+  return `#${randColor.toUpperCase()}`
+}
+
 /*
  .d8888b.  888                     888
 d88P  Y88b 888                     888
@@ -12,22 +41,7 @@ Y88b  d88P Y88b.  888  888 888     Y88b.
  "Y8888P"   "Y888 "Y888888 888      "Y888
 */
 
-db.get('bodies').then(function (doc) {
-  return db.remove(doc);
-}).then(function (result) {
-  console.log(`bodies removed`)
-}).catch(function (err) {});
-db.get('employees').then(function (doc) {
-  return db.remove(doc);
-}).then(function (result) {
-  console.log(`employees removed`)
-}).catch(function (err) {});
-db.get('family').then(function (doc) {
-  return db.remove(doc);
-}).then(function (result) {
-  console.log(`family removed`)
-}).catch(function (err) {});
-
+resetDB()
 
 /*
  .d8888b.                                                        888
@@ -53,12 +67,12 @@ setTimeout(() => {
     const deflatedStringifiedJSON = pako.deflate(stingifiedJSON)
     // Convert the resulting Uint8Array into a regular array
     const regularArray = Array.from(deflatedStringifiedJSON)
-    // Store our data (both deflated and the original)
+    // Store our data using Pako
     localStorage.setItem(`${name}Array`, JSON.stringify(regularArray))
+    // Store our data in localStorage
     localStorage.setItem(`${name}JSON`, stingifiedJSON)
-    // PouchDB stuff here:
+    // Store our data in IndexedDB
     db.put(fetchedJSON);
-    console.log(Array(50).fill().map((_)=>'*').join(''))
   }
 
   async function retrieveAndDecompress(file, name) {
@@ -77,8 +91,8 @@ setTimeout(() => {
     const json = JSON.parse(new TextDecoder().decode(deflatedTypedArray))
     const anotherJson = JSON.parse(localStorage.getItem(`${name}`))
     console.info(`Is the fetched ${file} the same as the retrieved, and decompressed, ${name}Array: ${JSON.stringify(fetchedJSON) === JSON.stringify(json)}`)
-    const regularArraySize = (localStorage[`${name}Array`].length * 2) / 1024
-    const stingifiedJSONSize = (localStorage[`${name}JSON`].length * 2) / 1024
+    const regularArraySize = getSize(`${name}Array`)
+    const stingifiedJSONSize = getSize(`${name}JSON`)
     db.get(name).then(function(doc) {
       const jsonFromIndexedDB = doc[name]
       console.info(`Is the ${name} fetched from IndexedDB the same as the retrieved data from localStorage: ${JSON.stringify(jsonFromIndexedDB) === JSON.stringify(json[name])}`)
@@ -113,27 +127,7 @@ Y88b  d88P Y88b.  888  888 888     Y88b.       888  888 Y88b 888 888  888 888 88
 */
 
 setTimeout(() => {
-  db.get('bodies').then(function(doc) {
-    return db.remove(doc);
-  }).then(function (result) {
-    console.log(`bodies removed`)
-  }).catch(function (err) {
-
-  });
-  db.get('employees').then(function(doc) {
-    return db.remove(doc);
-  }).then(function (result) {
-    console.log(`employees removed`)
-  }).catch(function (err) {
-
-  });
-  db.get('family').then(function(doc) {
-    return db.remove(doc);
-  }).then(function (result) {
-    console.log(`family removed`)
-  }).catch(function (err) {
-
-  });
+  resetDB()
 }, 6000)
 
 /*
@@ -148,6 +142,8 @@ d8888  d88P  Y88b                                                       888
 */
 
 setTimeout(() => {
+
+  console.log(Array(50).fill().map((_)=>'*').join(''))
 
   async function timedCompressAndStore(file, name) {
     const response = await fetch(file)
